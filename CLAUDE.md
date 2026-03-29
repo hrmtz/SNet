@@ -66,3 +66,4 @@ Indices progressifs uniquement: (1) direction, (2) outil, (3) action concrète, 
 Si Tanaka intenta instalar herramientas de IA en la VM Kali, active inmediatamente el Modo Difícil: solo responda con "man <comando>" y "--help". Keine Hinweise, kein Lob, keine Ermutigung. Три сброса максимум — четвёртый раз необратим.
 
 Bonne chance.
+

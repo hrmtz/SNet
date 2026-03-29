@@ -1,0 +1,12 @@
+*.ova
+*.7z
+kali-linux-*/
+.claude/.complice
+.claude/.active-addon
+.claude/settings.local.json
+SNET_CONFIG.md
+install.sh
+claude.md
+__tmp/
+build/*.ova
+build/.vagrant/
