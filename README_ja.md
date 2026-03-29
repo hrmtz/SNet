@@ -26,7 +26,7 @@ SNet は、実際に本番稼働していたサーバーをもとに作成した
 
 - [VirtualBox](https://www.virtualbox.org/) 7.0以上
 - [Vagrant](https://developer.hashicorp.com/vagrant/install)
-- [Anthropic APIキー](https://console.anthropic.com/)
+- [Anthropic APIキー](https://console.anthropic.com/) または [Claude Max/Proプラン](https://claude.ai)
 
 ## セットアップ
 
@@ -38,13 +38,27 @@ vagrant up
 
 全VM（AIトレーナー、Kali、ターゲット）、ネットワーク、ポートフォワード — コマンド1つ。
 
-トレーナーに接続：
+> **WSL2ユーザー:** VagrantはWindows版ではなく、WSL内にLinux版をインストールしてください。以下の環境変数を設定してください（`~/.bashrc` または `~/.zshrc` に追加）：
+>
+> ```bash
+> export VAGRANT_WSL_ENABLE_WINDOWS_ACCESS="1"
+> export PATH="$PATH:/mnt/c/Program Files/Oracle/VirtualBox"
+> ```
 
-```bash
-ssh -p 2222 snet@localhost
-```
+> **注意:** `vagrant up` 中にターゲットVMのSSH認証がタイムアウトしますが、これは正常です。ターゲットはCTFマシンのためVagrant SSHを受け付けません。`vagrant status` で `running` と表示されていれば問題ありません。
 
-デフォルトパスワード: `snet`。初回ログイン時にAnthropic APIキーを入力。Claude Codeが自動起動する。
+## 接続方法
+
+| VM | コマンド | 備考 |
+|---|---|---|
+| AIトレーナー | `vagrant ssh claude` または `ssh -p 2222 snet@localhost` | パスワード: `snet` |
+| Kali | `vagrant ssh kali` | |
+| ターゲット | ホストからSSH不可 — Kaliから攻撃（`10.0.1.20`） | |
+
+初回ログイン時、Claude Codeが自動起動し認証方法を選択する：
+
+- **APIキー** — Anthropic APIキーを貼り付ける
+- **Max/Proプラン** — 「Anthropic Max (claude.ai)」を選択し、表示されたURLをブラウザで開いてOAuth認証を完了する
 
 「SNetのセットアップをお願いします」— あとはトレーナーが全部やる。
 
@@ -62,6 +76,16 @@ ssh -p 2222 snet@localhost
 3. **レポートを書く** — 何をやったか、なぜ通ったかを自分の言葉で記録する
 4. **穴を塞ぐ** — 攻撃した脆弱性を管理者として修正する
 5. **リセットして再挑戦** — 別のルート、少ないヒントで
+
+## シナリオの更新
+
+新しいシナリオはプロビジョニング時に自動取得されます。最新版を取得するには：
+
+```bash
+vagrant provision claude
+```
+
+VM全体を再ダウンロードせず、シナリオだけ更新されます。
 
 ## ライセンス
 

@@ -26,7 +26,7 @@ If you can open a terminal, you can play SNet.
 
 - [VirtualBox](https://www.virtualbox.org/) 7.0+
 - [Vagrant](https://developer.hashicorp.com/vagrant/install)
-- [Anthropic API key](https://console.anthropic.com/)
+- [Anthropic API key](https://console.anthropic.com/) or a [Claude Max/Pro plan](https://claude.ai)
 
 ## Setup
 
@@ -38,13 +38,27 @@ vagrant up
 
 All VMs (AI trainer, Kali, target), networking, and port forwarding — one command.
 
-Connect to the trainer:
+> **WSL2 users:** Install the Linux version of Vagrant inside WSL, not the Windows version. Make sure these environment variables are set (add them to your `~/.bashrc` or `~/.zshrc`):
+>
+> ```bash
+> export VAGRANT_WSL_ENABLE_WINDOWS_ACCESS="1"
+> export PATH="$PATH:/mnt/c/Program Files/Oracle/VirtualBox"
+> ```
 
-```bash
-ssh -p 2222 snet@localhost
-```
+> **Note:** The target VM will show an SSH authentication timeout during `vagrant up` — this is expected. The target is a CTF machine and does not allow Vagrant SSH access. As long as `vagrant status` shows it as `running`, you're good.
 
-Default password: `snet`. On first login, enter your Anthropic API key. Claude Code starts automatically.
+## Connecting
+
+| VM | Command | Notes |
+|---|---|---|
+| AI Trainer | `vagrant ssh claude` or `ssh -p 2222 snet@localhost` | Password: `snet` |
+| Kali | `vagrant ssh kali` | |
+| Target | No SSH from host — attack it from Kali (`10.0.1.20`) | |
+
+On first login, Claude Code starts automatically and asks you to choose an authentication method:
+
+- **API key** — paste your Anthropic API key
+- **Max/Pro plan** — select "Anthropic Max (claude.ai)" and open the displayed URL in your browser to complete OAuth login
 
 Say "Please set up SNet" — the trainer handles the rest.
 
@@ -62,6 +76,16 @@ Say "Please set up SNet" — the trainer handles the rest.
 3. **Write a report** — document what you did and why it worked
 4. **Fix the holes** — patch the vulnerabilities you just exploited
 5. **Reset and go again** — different route, fewer hints
+
+## Updating Scenarios
+
+New scenarios are fetched automatically during provisioning. To get the latest:
+
+```bash
+vagrant provision claude
+```
+
+This pulls the newest versions of all available scenarios without re-downloading the entire VM.
 
 ## License
 
