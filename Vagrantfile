@@ -17,7 +17,9 @@ Vagrant.configure("2") do |config|
 
   # --- AI Trainer (Claude Code) ---
   config.vm.define "claude", primary: true do |c|
-    c.vm.box = "hrmtz/snet-claude"
+    # c.vm.box = "hrmtz/snet-claude"
+    c.vm.box = "snet-claude"
+    c.vm.box_url = "https://github.com/hrmtz/SNet/releases/download/v1.1.0/snet-claude.box"
     c.vm.hostname = "cage"
     c.vm.network "private_network", ip: "10.0.1.5", virtualbox__intnet: "SNet-Net"
     c.vm.network "forwarded_port", guest: 22, host: 2222, id: "claude-ssh"
@@ -157,8 +159,11 @@ EOF
   end
 
   # --- Target (server to hack) ---
+  # Target box is split into 2 parts on GitHub Releases due to 2GB limit.
+  # This trigger downloads and reassembles automatically before first use.
   config.vm.define "target" do |t|
-    t.vm.box = "hrmtz/snet1-target"
+    # t.vm.box = "hrmtz/snet1-target"
+    t.vm.box = "snet1-target"
     t.vm.hostname = "target"
     t.vm.network "private_network", ip: "10.0.1.20", virtualbox__intnet: "SNet-Net"
     t.ssh.insert_key = false
@@ -168,6 +173,22 @@ EOF
       vb.cpus = 1
       vb.name = "SNet1-Target"
       vb.gui = false
+    end
+
+    t.trigger.before :up do |trigger|
+      trigger.name = "Download target box"
+      trigger.ruby do |env, machine|
+        box_exists = system("vagrant box list | grep -q 'snet1-target'")
+        unless box_exists
+          puts "Downloading and assembling snet1-target box..."
+          base_url = "https://github.com/hrmtz/SNet/releases/download/v1.1.0"
+          system("curl -L -o /tmp/snet1-target.part-aa '#{base_url}/snet1-target.box.part-aa'")
+          system("curl -L -o /tmp/snet1-target.part-ab '#{base_url}/snet1-target.box.part-ab'")
+          system("cat /tmp/snet1-target.part-aa /tmp/snet1-target.part-ab > /tmp/snet1-target.box")
+          system("vagrant box add snet1-target /tmp/snet1-target.box")
+          system("rm -f /tmp/snet1-target.part-aa /tmp/snet1-target.part-ab /tmp/snet1-target.box")
+        end
+      end
     end
   end
 
