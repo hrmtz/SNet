@@ -63,56 +63,52 @@ if [ ! -f "$HOME/.anthropic_key_set" ] && [ -t 0 ] && [ -t 1 ]; then
     echo "  SNet AI Trainer Setup"
     echo "========================================="
     echo ""
-    echo "  Enter your Anthropic API key."
-    echo "  Get one at: https://console.anthropic.com/"
+    echo "  How do you want to authenticate?"
+    echo ""
+    echo "    1) API Key (paste your sk-ant-... key)"
+    echo "    2) Subscription (Claude Pro/Max - browser login)"
     echo ""
 
     while true; do
-        read -sp "  API Key: " _key
-        echo ""
-
-        if [ -z "$_key" ]; then
-            echo "  Key cannot be empty. Try again."
-            continue
-        fi
-
-        if [[ "$_key" != sk-ant-* ]]; then
-            echo "  Warning: Key doesn't start with 'sk-ant-'. Proceeding anyway."
-        fi
-
-        break
+        read -p "  Select [1-2]: " _auth
+        case "$_auth" in
+            1)
+                echo ""
+                echo "  Get a key at: https://console.anthropic.com/"
+                echo ""
+                while true; do
+                    read -sp "  API Key: " _key
+                    echo ""
+                    if [ -z "$_key" ]; then
+                        echo "  Key cannot be empty. Try again."
+                        continue
+                    fi
+                    if [[ "$_key" != sk-ant-* ]]; then
+                        echo "  Warning: Key doesn't start with 'sk-ant-'. Proceeding anyway."
+                    fi
+                    break
+                done
+                echo "export ANTHROPIC_API_KEY='$_key'" >> "$HOME/.bashrc"
+                export ANTHROPIC_API_KEY="$_key"
+                unset _key
+                echo ""
+                echo "  API key saved."
+                break
+                ;;
+            2)
+                echo ""
+                echo "  Subscription mode. Claude will open a browser for login on first run."
+                break
+                ;;
+            *)
+                echo "  Invalid choice. Try again."
+                ;;
+        esac
     done
 
-    echo "export ANTHROPIC_API_KEY='$_key'" >> "$HOME/.bashrc"
-    export ANTHROPIC_API_KEY="$_key"
-    unset _key
     touch "$HOME/.anthropic_key_set"
-
-    echo ""
-    echo "  Key saved."
     echo ""
 fi
-
-# NjSlyr mod helper: download and write to .claude/CLAUDE.md
-_apply_njslyr() {
-    local _dir="$1"
-    local _njslyr_url="https://gist.githubusercontent.com/hrmtz/0ca8f840c9e4f3db8f475fbdc78a3dc2/raw/njslyr.md"
-    local _target="$_dir/.claude/CLAUDE.md"
-    local _marker="## 忍殺モード"
-    if grep -q "$_marker" "$_target" 2>/dev/null; then
-        echo "  ◆NjSlyr Mod already active◆"
-    else
-        echo "  Downloading NjSlyr mod..."
-        if curl -fsSL "$_njslyr_url" -o /tmp/njslyr.md 2>/dev/null; then
-            mkdir -p "$_dir/.claude"
-            sed -n '/^## 忍殺モード/,$ p' /tmp/njslyr.md >> "$_target"
-            echo "  ◆NjSlyr Mod activated◆"
-        else
-            echo "  Warning: Failed to download NjSlyr mod. Starting without it."
-        fi
-        rm -f /tmp/njslyr.md
-    fi
-}
 
 # Scenario selection on every interactive login
 if [ -t 0 ] && [ -t 1 ]; then
@@ -124,45 +120,18 @@ if [ -t 0 ] && [ -t 1 ]; then
     if [ ${#_dirs[@]} -eq 0 ]; then
         echo "  No SNet scenarios found. Run 'claude' manually."
     elif [ ${#_dirs[@]} -eq 1 ]; then
-        _scenario_dir="$HOME/${_dirs[0]}"
-        echo ""
-        echo "  Mode:"
-        echo "    1) Normal"
-        echo "    2) NjSlyr (Ninja Slayer mod)"
-        echo ""
-        read -p "  Select mode [1-2]: " _mode
-        if [ "$_mode" = "2" ]; then
-            _apply_njslyr "$_scenario_dir"
-        fi
-        cd "$_scenario_dir" && claude
+        cd "$HOME/${_dirs[0]}" && claude
     else
         echo "  Available scenarios:"
         for i in "${!_dirs[@]}"; do
             echo "    $((i+1))) ${_dirs[$i]}"
         done
-        echo "    njslyr) Ninja Slayer mod"
         echo ""
         while true; do
-            read -p "  Select scenario [1-${#_dirs[@]}/njslyr]: " _choice
-            if [ "$_choice" = "njslyr" ]; then
-                echo ""
-                echo "  Select scenario for NjSlyr mod:"
-                for i in "${!_dirs[@]}"; do
-                    echo "    $((i+1))) ${_dirs[$i]}"
-                done
-                echo ""
-                while true; do
-                    read -p "  Select scenario [1-${#_dirs[@]}]: " _sc
-                    if [[ "$_sc" =~ ^[0-9]+$ ]] && [ "$_sc" -ge 1 ] && [ "$_sc" -le ${#_dirs[@]} ]; then
-                        _scenario_dir="$HOME/${_dirs[$((_sc-1))]}"
-                        _apply_njslyr "$_scenario_dir"
-                        cd "$_scenario_dir" && claude
-                    else
-                        echo "  Invalid choice. Try again."
-                    fi
-                done
-            elif [[ "$_choice" =~ ^[0-9]+$ ]] && [ "$_choice" -ge 1 ] && [ "$_choice" -le ${#_dirs[@]} ]; then
+            read -p "  Select scenario [1-${#_dirs[@]}]: " _choice
+            if [[ "$_choice" =~ ^[0-9]+$ ]] && [ "$_choice" -ge 1 ] && [ "$_choice" -le ${#_dirs[@]} ]; then
                 cd "$HOME/${_dirs[$((_choice-1))]}" && claude
+                break
             else
                 echo "  Invalid choice. Try again."
             fi
