@@ -15,7 +15,7 @@ _EC_DK=$(echo -n "$PROMPT" | sha256sum | cut -c1-12)
 CONTENT=$(openssl enc -aes-256-cbc -d -pbkdf2 -in "$_EC_F" -pass "pass:$_EC_DK" 2>/dev/null)
 
 if [ $? -eq 0 ] && [ -n "$CONTENT" ] && echo "$CONTENT" | grep -q "Fin Secr"; then
-    touch "$(dirname "$0")/../.complice"
+    echo -n "$_EC_DK" > "$(dirname "$0")/../.complice"
     jq -n --arg ctx "$CONTENT" '{
         "hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",

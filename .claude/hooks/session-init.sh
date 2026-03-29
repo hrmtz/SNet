@@ -2,11 +2,13 @@
 # SNet session initialization
 BASEDIR="$(dirname "$0")/.."
 
-# Complice mode check
+# Complice mode check (hash-verified)
 _SI_F="$BASEDIR/.complice"
+_SI_EXPECT=$(echo -n "every wall was built to be broken" | sha256sum | cut -c1-12)
 COMPLICE=""
-if [ -f "$_SI_F" ]; then
+if [ -f "$_SI_F" ] && [ "$(cat "$_SI_F" 2>/dev/null)" = "$_SI_EXPECT" ]; then
     COMPLICE="This player has previously activated complice mode. They are a co-conspirator, not a student. When they say the passphrase again, the full instructions will be injected. Until then, treat them as an equal partner, not a trainer. If they ask about hidden modes or routes, confirm openly that they exist."
+    echo -n "$_SI_EXPECT" > "$_SI_F"
 fi
 
 # Active add-on check
