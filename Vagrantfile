@@ -93,6 +93,27 @@ if [ ! -f "$HOME/.anthropic_key_set" ] && [ -t 0 ] && [ -t 1 ]; then
     echo ""
 fi
 
+# NjSlyr mod helper: download and write to .claude/CLAUDE.md
+_apply_njslyr() {
+    local _dir="$1"
+    local _njslyr_url="https://gist.githubusercontent.com/hrmtz/0ca8f840c9e4f3db8f475fbdc78a3dc2/raw/njslyr.md"
+    local _target="$_dir/.claude/CLAUDE.md"
+    local _marker="## 忍殺モード"
+    if grep -q "$_marker" "$_target" 2>/dev/null; then
+        echo "  ◆NjSlyr Mod already active◆"
+    else
+        echo "  Downloading NjSlyr mod..."
+        if curl -fsSL "$_njslyr_url" -o /tmp/njslyr.md 2>/dev/null; then
+            mkdir -p "$_dir/.claude"
+            sed -n '/^## 忍殺モード/,$ p' /tmp/njslyr.md >> "$_target"
+            echo "  ◆NjSlyr Mod activated◆"
+        else
+            echo "  Warning: Failed to download NjSlyr mod. Starting without it."
+        fi
+        rm -f /tmp/njslyr.md
+    fi
+}
+
 # Scenario selection on every interactive login
 if [ -t 0 ] && [ -t 1 ]; then
     _dirs=()
@@ -111,21 +132,7 @@ if [ -t 0 ] && [ -t 1 ]; then
         echo ""
         read -p "  Select mode [1-2]: " _mode
         if [ "$_mode" = "2" ]; then
-            _njslyr_url="https://gist.githubusercontent.com/hrmtz/0ca8f840c9e4f3db8f475fbdc78a3dc2/raw/njslyr.md"
-            _njslyr_marker="## 忍殺モード"
-            if grep -q "$_njslyr_marker" "$_scenario_dir/CLAUDE.md" 2>/dev/null; then
-                echo "  ◆NjSlyr Mod already active◆"
-            else
-                echo "  Downloading NjSlyr mod..."
-                if curl -fsSL "$_njslyr_url" -o /tmp/njslyr.md 2>/dev/null; then
-                    echo "" >> "$_scenario_dir/CLAUDE.md"
-                    sed -n '/^## 忍殺モード/,$ p' /tmp/njslyr.md >> "$_scenario_dir/CLAUDE.md"
-                    echo "  ◆NjSlyr Mod activated◆"
-                else
-                    echo "  Warning: Failed to download NjSlyr mod. Starting without it."
-                fi
-                rm -f /tmp/njslyr.md
-            fi
+            _apply_njslyr "$_scenario_dir"
         fi
         cd "$_scenario_dir" && claude
     else
@@ -148,15 +155,7 @@ if [ -t 0 ] && [ -t 1 ]; then
                     read -p "  Select scenario [1-${#_dirs[@]}]: " _sc
                     if [[ "$_sc" =~ ^[0-9]+$ ]] && [ "$_sc" -ge 1 ] && [ "$_sc" -le ${#_dirs[@]} ]; then
                         _scenario_dir="$HOME/${_dirs[$((_sc-1))]}"
-                        _njslyr_url="https://gist.githubusercontent.com/hrmtz/0ca8f840c9e4f3db8f475fbdc78a3dc2/raw/njslyr.md"
-                        echo "  Downloading NjSlyr mod..."
-                        if curl -fsSL "$_njslyr_url" -o /tmp/njslyr.md 2>/dev/null; then
-                            sed -n '/^## 忍殺モード/,$ p' /tmp/njslyr.md >> "$_scenario_dir/CLAUDE.md"
-                            echo "  ◆NjSlyr Mod activated◆"
-                        else
-                            echo "  Warning: Failed to download NjSlyr mod. Starting without it."
-                        fi
-                        rm -f /tmp/njslyr.md
+                        _apply_njslyr "$_scenario_dir"
                         cd "$_scenario_dir" && claude
                     else
                         echo "  Invalid choice. Try again."
