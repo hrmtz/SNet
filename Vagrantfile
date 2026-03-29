@@ -39,10 +39,11 @@ Vagrant.configure("2") do |config|
 
     # Fetch/update SNet scenarios from GitHub
     c.vm.provision "shell", privileged: false, inline: <<-'SHELL'
-      SCENARIOS="SNet1 SNet2 SNet3"
+      SCENARIOS="SNet SNet2"
       for s in $SCENARIOS; do
         if [ -d "$HOME/$s" ]; then
           echo "Updating $s..."
+          git -C "$HOME/$s" checkout -- . 2>/dev/null || true
           git -C "$HOME/$s" pull --ff-only 2>/dev/null || true
         else
           echo "Cloning $s..."
