@@ -60,7 +60,7 @@ cat > /etc/xdg/autostart/vboxclient-clipboard.desktop << 'DESKTOP'
 [Desktop Entry]
 Type=Application
 Name=VBoxClient Clipboard
-Exec=VBoxClient --clipboard
+Exec=/bin/sh -c "VBoxClient --clipboard"
 X-GNOME-Autostart-enabled=true
 DESKTOP
 
@@ -70,18 +70,44 @@ HOST_WIDTH=$(DISPLAY=:0 xrandr 2>/dev/null | awk '/\*/{print $1}' | head -1 | cu
 if [ "${HOST_WIDTH:-0}" -ge 3840 ] 2>/dev/null; then
   echo "4K display detected (${HOST_WIDTH}px). Applying HiDPI settings..."
 
+  # DPI-only scaling (no GDK_SCALE=2 — causes inconsistent sizing)
   cat > /home/vagrant/.Xresources << 'XRES'
-Xft.dpi: 192
+Xft.dpi: 144
 XRES
   chown vagrant:vagrant /home/vagrant/.Xresources
 
   grep -q 'GDK_SCALE' /home/vagrant/.profile 2>/dev/null || cat >> /home/vagrant/.profile << 'ENVS'
 
-# HiDPI scaling
-export GDK_SCALE=2
-export GDK_DPI_SCALE=0.5
-export QT_SCALE_FACTOR=2
+# HiDPI scaling (DPI-only, no integer scaling)
+export GDK_SCALE=1
+export GDK_DPI_SCALE=1
+export QT_SCALE_FACTOR=1.5
 ENVS
+
+  # Apply xfconf settings on first GUI login via autostart
+  cat > /etc/xdg/autostart/snet-hidpi.desktop << 'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=SNet HiDPI Settings
+Exec=/usr/local/bin/snet-hidpi.sh
+X-GNOME-Autostart-enabled=true
+DESKTOP
+
+  cat > /usr/local/bin/snet-hidpi.sh << 'SCRIPT'
+#!/bin/sh
+# Apply once, then self-disable
+if [ ! -f "$HOME/.snet-hidpi-done" ]; then
+  xfconf-query -c xsettings -p /Xft/DPI -s 144
+  xfconf-query -c xfce4-panel -p /panels/panel-1/size -s 48
+  xfconf-query -c xsettings -p /Gtk/IconSizes -s "gtk-menu=36,36:gtk-button=36,36:gtk-dialog=72,72:gtk-dnd=36,36:gtk-large-toolbar=36,36:gtk-small-toolbar=36,36"
+  xfconf-query -c xfce4-desktop -p /desktop-icons/icon-size -s 54
+  xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-width -s 675
+  xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-height -s 1050
+  xfconf-query -c xsettings -p /Gtk/KeyTheme --create -t string -s Emacs
+  touch "$HOME/.snet-hidpi-done"
+fi
+SCRIPT
+  chmod +x /usr/local/bin/snet-hidpi.sh
 else
   echo "Standard display (${HOST_WIDTH:-unknown}px). Skipping HiDPI."
 fi
