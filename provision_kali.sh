@@ -66,8 +66,10 @@ DESKTOP
 
 echo "=== [4/6] HiDPI settings ==="
 # Only apply if host resolution is 4K+ (width >= 3840)
-HOST_WIDTH=$(DISPLAY=:0 xrandr 2>/dev/null | awk '/\*/{print $1}' | head -1 | cut -dx -f1)
-if [ "${HOST_WIDTH:-0}" -ge 3840 ] 2>/dev/null; then
+HOST_WIDTH=$(DISPLAY=:0 xrandr 2>/dev/null | awk '/\*/{print $1}' | head -1 | cut -dx -f1 || true)
+HOST_WIDTH="${HOST_WIDTH:-0}"
+[[ "$HOST_WIDTH" =~ ^[0-9]+$ ]] || HOST_WIDTH=0
+if [ "$HOST_WIDTH" -ge 3840 ]; then
   echo "4K display detected (${HOST_WIDTH}px). Applying HiDPI settings..."
 
   # DPI-only scaling (no GDK_SCALE=2 — causes inconsistent sizing)
