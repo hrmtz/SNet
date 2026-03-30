@@ -293,6 +293,8 @@ EOF
       z.vm.box = "snet2-zabbix"
       z.vm.hostname = "zabbix"
       z.vm.network "private_network", ip: "10.0.2.30", virtualbox__intnet: "SNet2-Net"
+      z.ssh.insert_key = false
+      z.vm.boot_timeout = 10
       z.vm.provider "virtualbox" do |vb|
         vb.memory = 1024
         vb.cpus = 1
