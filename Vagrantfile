@@ -52,6 +52,23 @@ Vagrant.configure("2") do |config|
           git clone "https://github.com/hrmtz/$s.git" "$HOME/$s" 2>/dev/null || true
         fi
       done
+
+      # Overlay trainer config (CLAUDE.md, .claude/, encrypted files)
+      TRAINER_REPO="https://github.com/hrmtz/SNet-Claude.git"
+      if [ -d "$HOME/.snet-claude" ]; then
+        git -C "$HOME/.snet-claude" checkout -- . 2>/dev/null || true
+        git -C "$HOME/.snet-claude" pull --ff-only 2>/dev/null || true
+      else
+        git clone "$TRAINER_REPO" "$HOME/.snet-claude" 2>/dev/null || true
+      fi
+      # Copy trainer files into each scenario
+      for s in $SCENARIOS; do
+        if [ -d "$HOME/$s" ]; then
+          cp -r "$HOME/.snet-claude/.claude" "$HOME/$s/" 2>/dev/null || true
+          cp "$HOME/.snet-claude/CLAUDE.md" "$HOME/$s/" 2>/dev/null || true
+          cp "$HOME/.snet-claude/"*.enc "$HOME/$s/" 2>/dev/null || true
+        fi
+      done
     SHELL
 
     # Login script: API key prompt + scenario selection
