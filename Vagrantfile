@@ -287,6 +287,8 @@ EOF
         vb.cpus = 1
         vb.name = "SNet2-Target"
         vb.gui = false
+        # Ubuntu 22.04 needs at least 1GB to boot without kernel panic
+        vb.memory = 1024
       end
 
       split_box_trigger(t, "snet2-target", SNET2_RELEASE, parts: ['aa', 'ab', 'ac'])
