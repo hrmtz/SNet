@@ -100,12 +100,13 @@ DESKTOP
 # Apply once, then self-disable
 if [ ! -f "$HOME/.snet-hidpi-done" ]; then
   xfconf-query -c xsettings -p /Xft/DPI -s 144
+  xfconf-query -c xsettings -p /Gtk/FontName -s 'Cantarell 13'
   xfconf-query -c xfce4-panel -p /panels/panel-1/size -s 48
+  xfconf-query -c xfce4-panel -p /panels/panel-1/icon-size -s 0
+  xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-width -s 800
+  xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-height -s 1200
   xfconf-query -c xsettings -p /Gtk/IconSizes -s "gtk-menu=36,36:gtk-button=36,36:gtk-dialog=72,72:gtk-dnd=36,36:gtk-large-toolbar=36,36:gtk-small-toolbar=36,36"
   xfconf-query -c xfce4-desktop -p /desktop-icons/icon-size -s 54
-  xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-width -s 675
-  xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-height -s 1050
-  xfconf-query -c xsettings -p /Gtk/KeyTheme --create -t string -s Emacs
   touch "$HOME/.snet-hidpi-done"
 fi
 SCRIPT
