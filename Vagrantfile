@@ -160,8 +160,7 @@ if [ ! -f "$HOME/.anthropic_key_set" ] && [ -t 0 ] && [ -t 1 ]; then
                 echo "  Get a key at: https://console.anthropic.com/"
                 echo "  (leave empty to go back)"
                 echo ""
-                read -sp "  API Key: " _key
-                echo ""
+                read -p "  API Key: " _key
                 if [ -z "$_key" ]; then
                     continue
                 fi
