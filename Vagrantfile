@@ -37,16 +37,17 @@ SNET2_RELEASE = "https://github.com/hrmtz/SNet2/releases/download/v1.0.0"
 # SNET3_RELEASE = "https://github.com/hrmtz/SNet3/releases/download/v1.0.0"
 
 # Helper: auto-download and assemble split box from GitHub Releases
-def split_box_trigger(vm, box_name, base_url, parts: ['aa', 'ab'])
+def split_box_trigger(vm, box_name, base_url, parts: ['aa', 'ab'], file_prefix: nil)
+  file_prefix ||= box_name
   vm.trigger.before :up do |trigger|
     trigger.name = "Download #{box_name} box"
     trigger.ruby do |env, machine|
-      unless system("vagrant box list | grep -q '#{box_name}'")
+      unless system("vagrant box list | grep -qF '#{box_name}'")
         puts "Downloading and assembling #{box_name} box..."
-        parts.each { |p| system("curl -L -o /tmp/#{box_name}.part-#{p} '#{base_url}/#{box_name}.box.part-#{p}'") }
-        system("cat #{parts.map { |p| "/tmp/#{box_name}.part-#{p}" }.join(' ')} > /tmp/#{box_name}.box")
-        system("vagrant box add #{box_name} /tmp/#{box_name}.box")
-        system("rm -f #{parts.map { |p| "/tmp/#{box_name}.part-#{p}" }.join(' ')} /tmp/#{box_name}.box")
+        parts.each { |p| system("curl -L -o /tmp/#{file_prefix}.part-#{p} '#{base_url}/#{file_prefix}.box.part-#{p}'") }
+        system("cat #{parts.map { |p| "/tmp/#{file_prefix}.part-#{p}" }.join(' ')} > /tmp/#{file_prefix}.box")
+        system("vagrant box add '#{box_name}' /tmp/#{file_prefix}.box")
+        system("rm -f #{parts.map { |p| "/tmp/#{file_prefix}.part-#{p}" }.join(' ')} /tmp/#{file_prefix}.box")
       end
     end
   end
@@ -252,7 +253,7 @@ EOF
   # ===================================================================
   if SNET_ACTIVE.include?('1')
     config.vm.define "snet1-target" do |t|
-      t.vm.box = "snet1-target"
+      t.vm.box = "hrmtz/snet1-target"
       t.vm.hostname = "target"
       t.vm.network "private_network", ip: "10.0.1.20", virtualbox__intnet: "SNet-Net"
       t.ssh.insert_key = false
@@ -264,7 +265,7 @@ EOF
         vb.gui = false
       end
 
-      split_box_trigger(t, "snet1-target", SNET1_RELEASE)
+      split_box_trigger(t, "hrmtz/snet1-target", SNET1_RELEASE, file_prefix: "snet1-target")
     end
   end
 
@@ -273,7 +274,7 @@ EOF
   # ===================================================================
   if SNET_ACTIVE.include?('2')
     config.vm.define "snet2-target" do |t|
-      t.vm.box = "snet2-target"
+      t.vm.box = "hrmtz/snet2-target"
       t.vm.box_url = "#{SNET2_RELEASE}/snet2-target.box"
       t.vm.hostname = "target"
       t.vm.network "private_network", ip: "10.0.2.20", virtualbox__intnet: "SNet2-Net"
@@ -293,7 +294,7 @@ EOF
   # ===================================================================
   if SNET_ACTIVE.include?('2')
     config.vm.define "snet2-zabbix" do |z|
-      z.vm.box = "snet2-zabbix"
+      z.vm.box = "hrmtz/snet2-zabbix"
       z.vm.hostname = "zabbix"
       z.vm.network "private_network", ip: "10.0.2.30", virtualbox__intnet: "SNet2-Net"
       z.vm.provider "virtualbox" do |vb|
@@ -303,7 +304,7 @@ EOF
         vb.gui = false
       end
 
-      split_box_trigger(z, "snet2-zabbix", SNET2_RELEASE)
+      split_box_trigger(z, "hrmtz/snet2-zabbix", SNET2_RELEASE, file_prefix: "snet2-zabbix")
     end
   end
 
