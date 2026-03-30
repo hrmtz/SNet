@@ -79,12 +79,14 @@ Vagrant.configure("2") do |config|
     c.ssh.username = "snet"
     c.ssh.insert_key = true
 
-    # Install Node.js and Claude Code
+    # Install Node.js and Claude Code, then protect from scenario scripts
     c.vm.provision "shell", privileged: true, inline: <<-'SHELL'
       curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
       apt-get install -y nodejs
       npm install -g @anthropic-ai/claude-code
       su - snet -c "claude install -g" 2>/dev/null || true
+      # Protect claude and npm from being overwritten by scenario install scripts
+      chattr +i /usr/local/bin/claude /usr/bin/npm 2>/dev/null || true
     SHELL
 
     # Fetch/update scenario repos + trainer overlay (SNET-aware)
