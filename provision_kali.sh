@@ -65,55 +65,7 @@ X-GNOME-Autostart-enabled=true
 DESKTOP
 
 echo "=== [4/6] HiDPI settings ==="
-# Only apply if host resolution is 4K+ (width >= 3840)
-HOST_WIDTH=$(DISPLAY=:0 xrandr 2>/dev/null | awk '/\*/{print $1}' | head -1 | cut -dx -f1 || true)
-HOST_WIDTH="${HOST_WIDTH:-0}"
-[[ "$HOST_WIDTH" =~ ^[0-9]+$ ]] || HOST_WIDTH=0
-if [ "$HOST_WIDTH" -ge 3840 ]; then
-  echo "4K display detected (${HOST_WIDTH}px). Applying HiDPI settings..."
-
-  # DPI-only scaling (no GDK_SCALE=2 — causes inconsistent sizing)
-  cat > /home/vagrant/.Xresources << 'XRES'
-Xft.dpi: 144
-XRES
-  chown vagrant:vagrant /home/vagrant/.Xresources
-
-  grep -q 'GDK_SCALE' /home/vagrant/.profile 2>/dev/null || cat >> /home/vagrant/.profile << 'ENVS'
-
-# HiDPI scaling (DPI-only, no integer scaling)
-export GDK_SCALE=1
-export GDK_DPI_SCALE=1
-export QT_SCALE_FACTOR=1.5
-ENVS
-
-  # Apply xfconf settings on first GUI login via autostart
-  cat > /etc/xdg/autostart/snet-hidpi.desktop << 'DESKTOP'
-[Desktop Entry]
-Type=Application
-Name=SNet HiDPI Settings
-Exec=/usr/local/bin/snet-hidpi.sh
-X-GNOME-Autostart-enabled=true
-DESKTOP
-
-  cat > /usr/local/bin/snet-hidpi.sh << 'SCRIPT'
-#!/bin/sh
-# Apply once, then self-disable
-if [ ! -f "$HOME/.snet-hidpi-done" ]; then
-  xfconf-query -c xsettings -p /Xft/DPI -s 144
-  xfconf-query -c xsettings -p /Gtk/FontName -s 'Cantarell 13'
-  xfconf-query -c xfce4-panel -p /panels/panel-1/size -s 48
-  xfconf-query -c xfce4-panel -p /panels/panel-1/icon-size -s 0
-  xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-width -s 800
-  xfconf-query -c xfce4-panel -p /plugins/plugin-1/menu-height -s 1200
-  xfconf-query -c xsettings -p /Gtk/IconSizes -s "gtk-menu=36,36:gtk-button=36,36:gtk-dialog=72,72:gtk-dnd=36,36:gtk-large-toolbar=36,36:gtk-small-toolbar=36,36"
-  xfconf-query -c xfce4-desktop -p /desktop-icons/icon-size -s 54
-  touch "$HOME/.snet-hidpi-done"
-fi
-SCRIPT
-  chmod +x /usr/local/bin/snet-hidpi.sh
-else
-  echo "Standard display (${HOST_WIDTH:-unknown}px). Skipping HiDPI."
-fi
+echo "Skipped — use Kali's built-in HiDPI mode (Settings > Window Manager > HiDPI)"
 
 echo "=== [5/6] tmux config ==="
 cat > /home/vagrant/.tmux.conf << 'TMUX'
