@@ -51,14 +51,14 @@ vagrant up
 
 | VM | コマンド | 備考 |
 |---|---|---|
-| AIトレーナー | `vagrant ssh claude` または `ssh -p 2222 snet@localhost` | パスワード: `snet` |
+| AIトレーナー | `vagrant ssh claude` または `ssh -p 2222 snet@localhost` | |
 | Kali | `vagrant ssh kali` | |
 | ターゲット | ホストからSSH不可 — Kaliから攻撃（`10.0.1.20`） | |
 
 初回ログイン時、Claude Codeが自動起動し認証方法を選択する：
 
 - **APIキー** — Anthropic APIキーを貼り付ける
-- **Max/Proプラン** — 「Anthropic Max (claude.ai)」を選択し、表示されたURLをブラウザで開いてOAuth認証を完了する
+- **Max/Proプラン** — 「Subscription」を選択し、表示されたURLをブラウザで開いてOAuth認証を完了する
 
 「SNetのセットアップをお願いします」— あとはトレーナーが全部やる。
 
@@ -76,6 +76,24 @@ vagrant up
 3. **レポートを書く** — 何をやったか、なぜ通ったかを自分の言葉で記録する
 4. **穴を塞ぐ** — 攻撃した脆弱性を管理者として修正する
 5. **リセットして再挑戦** — 別のルート、少ないヒントで
+
+## シナリオ
+
+このリポジトリは複数のCTFシナリオに対応しています。デフォルトでは `vagrant up` で **SNet1**（初級）が起動します。
+
+| シナリオ | コマンド | 説明 |
+|---|---|---|
+| SNet1 | `vagrant up` | 鍵のかかっていない家への侵入（初級） |
+| [SNet2](SNet2/README.md) | `SNET=2 vagrant up` | 監視の目をかいくぐれ（中級） |
+
+SNet2ではZabbix監視サーバーが追加され、常時監視下での作戦行動が求められます。詳細は [SNet2 README](SNet2/README.md) を参照。
+
+VMが既に起動中の場合、特定のシナリオを追加するには：
+
+```bash
+SNET=2 vagrant up snet2-target snet2-zabbix   # SNet2のVMを追加起動
+SNET=2 vagrant provision claude                # トレーナーをSNet2用に設定
+```
 
 ## Tips: リバースシェルの操作性
 

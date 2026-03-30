@@ -51,14 +51,14 @@ All VMs (AI trainer, Kali, target), networking, and port forwarding — one comm
 
 | VM | Command | Notes |
 |---|---|---|
-| AI Trainer | `vagrant ssh claude` or `ssh -p 2222 snet@localhost` | Password: `snet` |
+| AI Trainer | `vagrant ssh claude` or `ssh -p 2222 snet@localhost` | |
 | Kali | `vagrant ssh kali` | |
 | Target | No SSH from host — attack it from Kali (`10.0.1.20`) | |
 
 On first login, Claude Code starts automatically and asks you to choose an authentication method:
 
 - **API key** — paste your Anthropic API key
-- **Max/Pro plan** — select "Anthropic Max (claude.ai)" and open the displayed URL in your browser to complete OAuth login
+- **Max/Pro plan** — select "Subscription" and open the displayed URL in your browser to complete OAuth login
 
 Say "Please set up SNet" — the trainer handles the rest.
 
@@ -76,6 +76,24 @@ Say "Please set up SNet" — the trainer handles the rest.
 3. **Write a report** — document what you did and why it worked
 4. **Fix the holes** — patch the vulnerabilities you just exploited
 5. **Reset and go again** — different route, fewer hints
+
+## Scenarios
+
+This repository supports multiple CTF scenarios. By default, `vagrant up` starts **SNet1** (beginner).
+
+| Scenario | Command | Description |
+|---|---|---|
+| SNet1 | `vagrant up` | Breaking into an unlocked house (Beginner) |
+| [SNet2](SNet2/README.md) | `SNET=2 vagrant up` | Staying hidden from the guards (Intermediate) |
+
+SNet2 adds a Zabbix monitoring server — you must operate under active surveillance. See [SNet2 README](SNet2/README.md) for details.
+
+To start a specific scenario when VMs are already running:
+
+```bash
+SNET=2 vagrant up snet2-target snet2-zabbix   # add SNet2 VMs
+SNET=2 vagrant provision claude                # configure trainer for SNet2
+```
 
 ## Tips: Reverse Shell Usability
 
