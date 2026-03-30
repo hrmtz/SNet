@@ -75,6 +75,8 @@ Vagrant.configure("2") do |config|
       vb.cpus = 1
       vb.name = "SNet-Claude"
       vb.gui = false
+      # Change NAT subnet to avoid collision with SNet2-Net (10.0.2.0/24)
+      vb.customize ["modifyvm", :id, "--natnet1", "10.0.100.0/24"]
     end
     c.ssh.username = "snet"
     c.ssh.insert_key = true
@@ -243,6 +245,8 @@ EOF
       vb.cpus = 4
       vb.name = "SNet-Kali"
       vb.gui = false
+      # Change NAT subnet to avoid collision with SNet2-Net (10.0.2.0/24)
+      vb.customize ["modifyvm", :id, "--natnet1", "10.0.100.0/24"]
     end
 
     # UX patches: rlwrap, tmux, Guest Additions, HiDPI, snet-switch

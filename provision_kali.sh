@@ -138,19 +138,23 @@ cat > /usr/local/bin/snet-switch << 'SCRIPT'
 #!/bin/bash
 # snet-switch — toggle active SNet network
 # eth0=NAT (Vagrant), eth1=SNet-Net, eth2=SNet2-Net, eth3=SNet3-Net
-# To add a new scenario: add a case entry for the new ethN
 
-# Bring all scenario NICs down first
+# Disconnect all scenario NICs from NetworkManager and flush
 for iface in eth1 eth2 eth3; do
+  sudo nmcli device disconnect "$iface" 2>/dev/null
+  sudo ip addr flush dev "$iface" 2>/dev/null
   sudo ip link set "$iface" down 2>/dev/null
 done
 
 case "$1" in
-  1) sudo ip link set eth1 up 2>/dev/null
+  1) sudo ip link set eth1 up
+     sudo ip addr add 10.0.1.10/24 dev eth1 2>/dev/null
      echo "Switched to SNet1 network (10.0.1.10 on SNet-Net)" ;;
-  2) sudo ip link set eth2 up 2>/dev/null
+  2) sudo ip link set eth2 up
+     sudo ip addr add 10.0.2.10/24 dev eth2 2>/dev/null
      echo "Switched to SNet2 network (10.0.2.10 on SNet2-Net)" ;;
-  3) sudo ip link set eth3 up 2>/dev/null
+  3) sudo ip link set eth3 up
+     sudo ip addr add 10.0.3.10/24 dev eth3 2>/dev/null
      echo "Switched to SNet3 network (10.0.3.10 on SNet3-Net)" ;;
   *) echo "Usage: snet-switch {1|2|3}"; exit 1 ;;
 esac
