@@ -86,7 +86,11 @@ Vagrant.configure("2") do |config|
       npm install -g @anthropic-ai/claude-code
       su - snet -c "claude install -g" 2>/dev/null || true
       # Protect claude and npm from being overwritten by scenario install scripts
-      chattr +i /usr/local/bin/claude /usr/bin/npm 2>/dev/null || true
+      # Use readlink -f to resolve symlinks (chattr doesn't work on symlinks)
+      for bin in claude npm; do
+        real=$(readlink -f "$(which $bin 2>/dev/null)" 2>/dev/null)
+        [ -n "$real" ] && [ -f "$real" ] && chattr +i "$real" 2>/dev/null || true
+      done
     SHELL
 
     # Fetch/update scenario repos + trainer overlay (SNET-aware)
