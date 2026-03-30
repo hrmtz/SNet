@@ -33,7 +33,7 @@ end
 
 # GitHub Releases base URLs (one per scenario)
 SNET1_RELEASE = "https://github.com/hrmtz/SNet/releases/download/v1.1.0"
-SNET2_RELEASE = "https://github.com/hrmtz/SNet2/releases/download/v1.0.0"
+SNET2_RELEASE = "https://github.com/hrmtz/SNet2/releases/download/v1.1.0"
 # SNET3_RELEASE = "https://github.com/hrmtz/SNet3/releases/download/v1.0.0"
 
 # Helper: auto-download and assemble split box from GitHub Releases
@@ -84,6 +84,7 @@ Vagrant.configure("2") do |config|
       curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
       apt-get install -y nodejs
       npm install -g @anthropic-ai/claude-code
+      su - snet -c "claude install -g" 2>/dev/null || true
     SHELL
 
     # Fetch/update scenario repos + trainer overlay (SNET-aware)
@@ -268,8 +269,7 @@ EOF
   # ===================================================================
   if SNET_ACTIVE.include?('2')
     config.vm.define "snet2-target" do |t|
-      t.vm.box = "hrmtz/snet2-target"
-      t.vm.box_url = "#{SNET2_RELEASE}/snet2-target.box"
+      t.vm.box = "snet2-target"
       t.vm.hostname = "target"
       t.vm.network "private_network", ip: "10.0.2.20", virtualbox__intnet: "SNet2-Net"
       t.ssh.insert_key = false
@@ -280,6 +280,8 @@ EOF
         vb.name = "SNet2-Target"
         vb.gui = false
       end
+
+      split_box_trigger(t, "snet2-target", SNET2_RELEASE, parts: ['aa', 'ab', 'ac'])
     end
   end
 
@@ -288,7 +290,7 @@ EOF
   # ===================================================================
   if SNET_ACTIVE.include?('2')
     config.vm.define "snet2-zabbix" do |z|
-      z.vm.box = "hrmtz/snet2-zabbix"
+      z.vm.box = "snet2-zabbix"
       z.vm.hostname = "zabbix"
       z.vm.network "private_network", ip: "10.0.2.30", virtualbox__intnet: "SNet2-Net"
       z.vm.provider "virtualbox" do |vb|
@@ -298,7 +300,7 @@ EOF
         vb.gui = false
       end
 
-      split_box_trigger(z, "hrmtz/snet2-zabbix", SNET2_RELEASE, file_prefix: "snet2-zabbix")
+      split_box_trigger(z, "snet2-zabbix", SNET2_RELEASE, parts: ['aa', 'ab', 'ac'])
     end
   end
 
