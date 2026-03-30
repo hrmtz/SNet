@@ -151,11 +151,14 @@ EOF
     k.vm.network "private_network", ip: "10.0.1.10", virtualbox__intnet: "SNet-Net"
     k.vm.network "forwarded_port", guest: 22, host: 3022, id: "kali-ssh"
     k.vm.provider "virtualbox" do |vb|
-      vb.memory = 2048
-      vb.cpus = 2
+      vb.memory = 4096
+      vb.cpus = 4
       vb.name = "SNet-Kali"
       vb.gui = false
     end
+
+    # UX patches: rlwrap, tmux, Guest Additions clipboard fix, HiDPI
+    k.vm.provision "shell", privileged: true, path: "provision_kali.sh"
   end
 
   # --- Target (server to hack) ---

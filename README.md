@@ -77,6 +77,25 @@ Say "Please set up SNet" — the trainer handles the rest.
 4. **Fix the holes** — patch the vulnerabilities you just exploited
 5. **Reset and go again** — different route, fewer hints
 
+## Tips: Reverse Shell Usability
+
+The Kali VM comes with `rlwrap` and `tmux` pre-installed to make reverse shells more comfortable.
+
+**Recommended workflow:**
+
+```bash
+# 1. Start a tmux session
+tmux new-session -s attack
+
+# 2. Use rlwrap with nc for line editing and history
+rlwrap nc -lvnp 4444
+
+# 3. Scroll up/down in tmux: Ctrl+B, then [
+#    Exit scroll mode: q
+```
+
+**Why?** Raw reverse shells lack arrow keys, tab completion, and scrollback. `rlwrap` adds readline support (history, editing), and `tmux` adds scrollback and window management.
+
 ## Updating Scenarios
 
 New scenarios are fetched automatically during provisioning. To get the latest:
