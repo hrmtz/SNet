@@ -158,20 +158,18 @@ if [ ! -f "$HOME/.anthropic_key_set" ] && [ -t 0 ] && [ -t 1 ]; then
             1)
                 echo ""
                 echo "  Get a key at: https://console.anthropic.com/"
-                echo "  (leave empty to go back)"
                 echo ""
                 read -p "  API Key: " _key
-                if [ -z "$_key" ]; then
-                    continue
+                if [ -n "$_key" ]; then
+                    if [[ "$_key" != sk-ant-* ]]; then
+                        echo "  Warning: Key doesn't start with 'sk-ant-'. Proceeding anyway."
+                    fi
+                    echo "export ANTHROPIC_API_KEY='$_key'" >> "$HOME/.bashrc"
+                    export ANTHROPIC_API_KEY="$_key"
+                    unset _key
+                    echo ""
+                    echo "  API key saved."
                 fi
-                if [[ "$_key" != sk-ant-* ]]; then
-                    echo "  Warning: Key doesn't start with 'sk-ant-'. Proceeding anyway."
-                fi
-                echo "export ANTHROPIC_API_KEY='$_key'" >> "$HOME/.bashrc"
-                export ANTHROPIC_API_KEY="$_key"
-                unset _key
-                echo ""
-                echo "  API key saved."
                 break
                 ;;
             2)
