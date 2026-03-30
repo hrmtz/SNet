@@ -14,6 +14,13 @@
 #   SNET=2:  snet2-target, snet2-zabbix
 #   SNET=3:  (TBD)
 #
+# Network layout:
+#   SNet1:   10.0.10.0/24  (SNet-Net)
+#   SNet2:   10.0.20.0/24  (SNet2-Net)
+#   SNet3:   10.0.30.0/24  (SNet3-Net)
+#   VulnHub: 10.0.128.0/24 (VulnHub-Net)
+#   NAT:     10.0.2.0/24   (VirtualBox default, do not use)
+#
 # Prerequisites:
 #   - VirtualBox 7.0+
 #   - Vagrant (https://developer.hashicorp.com/vagrant/install)
@@ -60,35 +67,31 @@ Vagrant.configure("2") do |config|
 
   # ===================================================================
   # Claude VM (AI Trainer) — shared across scenarios, multi-network
-  # To add a new scenario: add a private_network line with 10.0.N.5
+  # To add a new scenario: add a private_network line with 10.0.N0.5
   # ===================================================================
   config.vm.define "claude", primary: true do |c|
     c.vm.box = "snet-claude"
     c.vm.box_url = "#{SNET1_RELEASE}/snet-claude.box"
     c.vm.hostname = "cage"
-    c.vm.network "private_network", ip: "10.0.1.5", virtualbox__intnet: "SNet-Net"
-    c.vm.network "private_network", ip: "10.0.2.5", virtualbox__intnet: "SNet2-Net"
-    c.vm.network "private_network", ip: "10.0.3.5", virtualbox__intnet: "SNet3-Net"
+    c.vm.network "private_network", ip: "10.0.10.5", virtualbox__intnet: "SNet-Net"
+    c.vm.network "private_network", ip: "10.0.20.5", virtualbox__intnet: "SNet2-Net"
+    c.vm.network "private_network", ip: "10.0.30.5", virtualbox__intnet: "SNet3-Net"
     c.vm.network "forwarded_port", guest: 22, host: 2222, id: "claude-ssh"
     c.vm.provider "virtualbox" do |vb|
       vb.memory = 1024
       vb.cpus = 1
       vb.name = "SNet-Claude"
       vb.gui = false
-      # Change NAT subnet to avoid collision with SNet2-Net (10.0.2.0/24)
-      vb.customize ["modifyvm", :id, "--natnet1", "10.0.100.0/24"]
     end
     c.ssh.username = "snet"
     c.ssh.insert_key = true
 
-    # Install Node.js and Claude Code, then protect from scenario scripts
+    # Install Node.js and Claude Code
     c.vm.provision "shell", privileged: true, inline: <<-'SHELL'
       curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
       apt-get install -y nodejs
       npm install -g @anthropic-ai/claude-code
       su - snet -c "claude install -g" 2>/dev/null || true
-      # Note: chattr +i protection removed — blocks Claude Code updates.
-      # install.sh hostname check (layer 1) is sufficient protection.
     SHELL
 
     # Fetch/update scenario repos + trainer overlay (SNET-aware)
@@ -226,23 +229,22 @@ EOF
 
   # ===================================================================
   # Kali VM (attacker) — shared across scenarios, multi-network
-  # To add a new scenario: add a private_network line with 10.0.N.10
+  # To add a new scenario: add a private_network line with 10.0.N0.10
   # Use 'snet-switch N' on Kali to activate the right NIC
   # ===================================================================
   config.vm.define "kali" do |k|
     k.vm.box = "kalilinux/rolling"
     k.vm.hostname = "kali"
-    k.vm.network "private_network", ip: "10.0.1.10", virtualbox__intnet: "SNet-Net"
-    k.vm.network "private_network", ip: "10.0.2.10", virtualbox__intnet: "SNet2-Net"
-    k.vm.network "private_network", ip: "10.0.3.10", virtualbox__intnet: "SNet3-Net"
+    k.vm.network "private_network", ip: "10.0.10.10", virtualbox__intnet: "SNet-Net"
+    k.vm.network "private_network", ip: "10.0.20.10", virtualbox__intnet: "SNet2-Net"
+    k.vm.network "private_network", ip: "10.0.30.10", virtualbox__intnet: "SNet3-Net"
+    k.vm.network "private_network", ip: "10.0.128.10", virtualbox__intnet: "VulnHub-Net"
     k.vm.network "forwarded_port", guest: 22, host: 3022, id: "kali-ssh"
     k.vm.provider "virtualbox" do |vb|
       vb.memory = 4096
       vb.cpus = 4
       vb.name = "SNet-Kali"
       vb.gui = false
-      # Change NAT subnet to avoid collision with SNet2-Net (10.0.2.0/24)
-      vb.customize ["modifyvm", :id, "--natnet1", "10.0.100.0/24"]
     end
 
     # UX patches: rlwrap, tmux, Guest Additions, HiDPI, snet-switch
@@ -256,7 +258,7 @@ EOF
     config.vm.define "snet1-target" do |t|
       t.vm.box = "hrmtz/snet1-target"
       t.vm.hostname = "target"
-      t.vm.network "private_network", ip: "10.0.1.20", virtualbox__intnet: "SNet-Net"
+      t.vm.network "private_network", ip: "10.0.10.20", virtualbox__intnet: "SNet-Net"
       t.ssh.insert_key = false
       t.vm.boot_timeout = 10
       t.vm.provider "virtualbox" do |vb|
@@ -277,7 +279,7 @@ EOF
     config.vm.define "snet2-target" do |t|
       t.vm.box = "snet2-target"
       t.vm.hostname = "target"
-      t.vm.network "private_network", ip: "10.0.2.20", virtualbox__intnet: "SNet2-Net"
+      t.vm.network "private_network", ip: "10.0.20.20", virtualbox__intnet: "SNet2-Net"
       t.ssh.insert_key = false
       t.vm.boot_timeout = 10
       t.vm.provider "virtualbox" do |vb|
@@ -298,7 +300,7 @@ EOF
     config.vm.define "snet2-zabbix" do |z|
       z.vm.box = "snet2-zabbix"
       z.vm.hostname = "zabbix"
-      z.vm.network "private_network", ip: "10.0.2.30", virtualbox__intnet: "SNet2-Net"
+      z.vm.network "private_network", ip: "10.0.20.30", virtualbox__intnet: "SNet2-Net"
       z.ssh.insert_key = false
       z.vm.boot_timeout = 10
       z.vm.provider "virtualbox" do |vb|
@@ -314,14 +316,14 @@ EOF
 
   # ===================================================================
   # SNet3 (TBD — add VMs here)
-  # Pattern: 10.0.3.x on SNet3-Net
+  # Pattern: 10.0.30.x on SNet3-Net
   # ===================================================================
   # if SNET_ACTIVE.include?('3')
   #   config.vm.define "snet3-target" do |t|
   #     t.vm.box = "snet3-target"
   #     t.vm.box_url = "#{SNET3_RELEASE}/snet3-target.box"
   #     t.vm.hostname = "target"
-  #     t.vm.network "private_network", ip: "10.0.3.20", virtualbox__intnet: "SNet3-Net"
+  #     t.vm.network "private_network", ip: "10.0.30.20", virtualbox__intnet: "SNet3-Net"
   #     t.ssh.insert_key = false
   #     t.vm.boot_timeout = 10
   #     t.vm.provider "virtualbox" do |vb|

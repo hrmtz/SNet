@@ -140,7 +140,7 @@ cat > /usr/local/bin/snet-switch << 'SCRIPT'
 # eth0=NAT (Vagrant), eth1=SNet-Net, eth2=SNet2-Net, eth3=SNet3-Net
 
 # Disconnect all scenario NICs from NetworkManager and flush
-for iface in eth1 eth2 eth3; do
+for iface in eth1 eth2 eth3 eth4; do
   sudo nmcli device disconnect "$iface" 2>/dev/null
   sudo ip addr flush dev "$iface" 2>/dev/null
   sudo ip link set "$iface" down 2>/dev/null
@@ -148,21 +148,24 @@ done
 
 case "$1" in
   1) sudo ip link set eth1 up
-     sudo ip addr add 10.0.1.10/24 dev eth1 2>/dev/null
-     echo "Switched to SNet1 network (10.0.1.10 on SNet-Net)" ;;
+     sudo ip addr add 10.0.10.10/24 dev eth1 2>/dev/null
+     echo "Switched to SNet1 network (10.0.10.10 on SNet-Net)" ;;
   2) sudo ip link set eth2 up
-     sudo ip addr add 10.0.2.10/24 dev eth2 2>/dev/null
-     echo "Switched to SNet2 network (10.0.2.10 on SNet2-Net)" ;;
+     sudo ip addr add 10.0.20.10/24 dev eth2 2>/dev/null
+     echo "Switched to SNet2 network (10.0.20.10 on SNet2-Net)" ;;
   3) sudo ip link set eth3 up
-     sudo ip addr add 10.0.3.10/24 dev eth3 2>/dev/null
-     echo "Switched to SNet3 network (10.0.3.10 on SNet3-Net)" ;;
-  *) echo "Usage: snet-switch {1|2|3}"; exit 1 ;;
+     sudo ip addr add 10.0.30.10/24 dev eth3 2>/dev/null
+     echo "Switched to SNet3 network (10.0.30.10 on SNet3-Net)" ;;
+  128) sudo ip link set eth4 up
+     sudo ip addr add 10.0.128.10/24 dev eth4 2>/dev/null
+     echo "Switched to VulnHub network (10.0.128.10 on VulnHub-Net)" ;;
+  *) echo "Usage: snet-switch {1|2|3|128}"; exit 1 ;;
 esac
 SCRIPT
 chmod +x /usr/local/bin/snet-switch
 
 # Default: SNet1 active, all others inactive
-for iface in eth2 eth3; do
+for iface in eth2 eth3 eth4; do
   ip link show "$iface" &>/dev/null && ip link set "$iface" down
 done
 

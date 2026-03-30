@@ -53,7 +53,7 @@ vagrant up
 |---|---|---|
 | AIトレーナー | `vagrant ssh claude` または `ssh -p 2222 snet@localhost` | |
 | Kali | `vagrant ssh kali` | |
-| ターゲット | ホストからSSH不可 — Kaliから攻撃（`10.0.1.20`） | |
+| ターゲット | ホストからSSH不可 — Kaliから攻撃（`10.0.10.20`） | |
 
 初回ログイン時、Claude Codeが自動起動し認証方法を選択する：
 

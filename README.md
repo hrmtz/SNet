@@ -53,7 +53,7 @@ All VMs (AI trainer, Kali, target), networking, and port forwarding — one comm
 |---|---|---|
 | AI Trainer | `vagrant ssh claude` or `ssh -p 2222 snet@localhost` | |
 | Kali | `vagrant ssh kali` | |
-| Target | No SSH from host — attack it from Kali (`10.0.1.20`) | |
+| Target | No SSH from host — attack it from Kali (`10.0.10.20`) | |
 
 On first login, Claude Code starts automatically and asks you to choose an authentication method:
 
