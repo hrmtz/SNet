@@ -1,5 +1,18 @@
 # SNet - AI-Guided CTF
-# Usage: vagrant up
+#
+# Usage:
+#   vagrant up                       # SNet1 scenario (default)
+#   SNET=2 vagrant up                # SNet2 scenario
+#   SNET=3 vagrant up                # SNet3 scenario
+#   SNET=all vagrant up              # All scenarios
+#   SNET=1,2 vagrant up              # Multiple scenarios
+#   SNET=2 vagrant provision claude  # Add SNet2 to existing claude VM
+#
+# VMs created:
+#   Always:  claude (AI trainer), kali (attacker)
+#   SNET=1:  snet1-target
+#   SNET=2:  snet2-target, snet2-zabbix
+#   SNET=3:  (TBD)
 #
 # Prerequisites:
 #   - VirtualBox 7.0+
@@ -10,18 +23,51 @@
 #   export VAGRANT_WSL_ENABLE_WINDOWS_ACCESS="1"
 #   export PATH="$PATH:/mnt/c/Program Files/Oracle/VirtualBox"
 
+SNET_RAW = ENV.fetch('SNET', '1')
+# Parse SNET: "1", "2", "3", "1,2", "all"
+SNET_ACTIVE = if SNET_RAW == 'all'
+  ['1', '2', '3']
+else
+  SNET_RAW.split(',').map(&:strip)
+end
+
+# GitHub Releases base URLs (one per scenario)
+SNET1_RELEASE = "https://github.com/hrmtz/SNet/releases/download/v1.1.0"
+SNET2_RELEASE = "https://github.com/hrmtz/SNet2/releases/download/v1.0.0"
+# SNET3_RELEASE = "https://github.com/hrmtz/SNet3/releases/download/v1.0.0"
+
+# Helper: auto-download and assemble split box from GitHub Releases
+def split_box_trigger(vm, box_name, base_url, parts: ['aa', 'ab'])
+  vm.trigger.before :up do |trigger|
+    trigger.name = "Download #{box_name} box"
+    trigger.ruby do |env, machine|
+      unless system("vagrant box list | grep -q '#{box_name}'")
+        puts "Downloading and assembling #{box_name} box..."
+        parts.each { |p| system("curl -L -o /tmp/#{box_name}.part-#{p} '#{base_url}/#{box_name}.box.part-#{p}'") }
+        system("cat #{parts.map { |p| "/tmp/#{box_name}.part-#{p}" }.join(' ')} > /tmp/#{box_name}.box")
+        system("vagrant box add #{box_name} /tmp/#{box_name}.box")
+        system("rm -f #{parts.map { |p| "/tmp/#{box_name}.part-#{p}" }.join(' ')} /tmp/#{box_name}.box")
+      end
+    end
+  end
+end
+
 Vagrant.configure("2") do |config|
 
   # Disable default synced folder (not needed, avoids guest additions dependency)
   config.vm.synced_folder ".", "/vagrant", disabled: true
 
-  # --- AI Trainer (Claude Code) ---
+  # ===================================================================
+  # Claude VM (AI Trainer) — shared across scenarios, multi-network
+  # To add a new scenario: add a private_network line with 10.0.N.5
+  # ===================================================================
   config.vm.define "claude", primary: true do |c|
-    # c.vm.box = "hrmtz/snet-claude"
     c.vm.box = "snet-claude"
-    c.vm.box_url = "https://github.com/hrmtz/SNet/releases/download/v1.1.0/snet-claude.box"
+    c.vm.box_url = "#{SNET1_RELEASE}/snet-claude.box"
     c.vm.hostname = "cage"
     c.vm.network "private_network", ip: "10.0.1.5", virtualbox__intnet: "SNet-Net"
+    c.vm.network "private_network", ip: "10.0.2.5", virtualbox__intnet: "SNet2-Net"
+    c.vm.network "private_network", ip: "10.0.3.5", virtualbox__intnet: "SNet3-Net"
     c.vm.network "forwarded_port", guest: 22, host: 2222, id: "claude-ssh"
     c.vm.provider "virtualbox" do |vb|
       vb.memory = 1024
@@ -39,9 +85,23 @@ Vagrant.configure("2") do |config|
       npm install -g @anthropic-ai/claude-code
     SHELL
 
-    # Fetch/update SNet scenarios from GitHub
-    c.vm.provision "shell", privileged: false, inline: <<-'SHELL'
-      SCENARIOS="SNet SNet2"
+    # Fetch/update scenario repos + trainer overlay (SNET-aware)
+    c.vm.provision "shell", privileged: false, env: { "SNET" => SNET_RAW }, inline: <<-'SHELL'
+      # Build scenario list from SNET (e.g. "1", "2", "1,2", "all")
+      SCENARIOS=""
+      if [ "$SNET" = "all" ]; then
+        SCENARIOS="SNet SNet2 SNet3"
+      else
+        for n in $(echo "$SNET" | tr ',' ' '); do
+          case "$n" in
+            1) SCENARIOS="$SCENARIOS SNet" ;;
+            2) SCENARIOS="$SCENARIOS SNet2" ;;
+            3) SCENARIOS="$SCENARIOS SNet3" ;;
+          esac
+        done
+      fi
+      SCENARIOS=$(echo "$SCENARIOS" | xargs)  # trim
+
       for s in $SCENARIOS; do
         if [ -d "$HOME/$s" ]; then
           echo "Updating $s..."
@@ -53,7 +113,7 @@ Vagrant.configure("2") do |config|
         fi
       done
 
-      # Overlay trainer config (CLAUDE.md, .claude/, encrypted files)
+      # Overlay trainer config
       TRAINER_REPO="https://github.com/hrmtz/SNet-Claude.git"
       if [ -d "$HOME/.snet-claude" ]; then
         git -C "$HOME/.snet-claude" checkout -- . 2>/dev/null || true
@@ -61,12 +121,15 @@ Vagrant.configure("2") do |config|
       else
         git clone "$TRAINER_REPO" "$HOME/.snet-claude" 2>/dev/null || true
       fi
-      # Copy trainer files into each scenario
+
+      # Copy scenario-specific files (CLAUDE.md, enc files)
       for s in $SCENARIOS; do
         if [ -d "$HOME/$s" ]; then
           cp -r "$HOME/.snet-claude/.claude" "$HOME/$s/" 2>/dev/null || true
-          cp "$HOME/.snet-claude/CLAUDE.md" "$HOME/$s/" 2>/dev/null || true
-          cp "$HOME/.snet-claude/"*.enc "$HOME/$s/" 2>/dev/null || true
+          if [ -d "$HOME/.snet-claude/$s" ]; then
+            cp "$HOME/.snet-claude/$s/CLAUDE.md" "$HOME/$s/" 2>/dev/null || true
+            cp "$HOME/.snet-claude/$s/"*.enc "$HOME/$s/" 2>/dev/null || true
+          fi
         fi
       done
     SHELL
@@ -161,11 +224,17 @@ EOF
     SHELL
   end
 
-  # --- Kali Linux (attacker) ---
+  # ===================================================================
+  # Kali VM (attacker) — shared across scenarios, multi-network
+  # To add a new scenario: add a private_network line with 10.0.N.10
+  # Use 'snet-switch N' on Kali to activate the right NIC
+  # ===================================================================
   config.vm.define "kali" do |k|
     k.vm.box = "kalilinux/rolling"
     k.vm.hostname = "kali"
     k.vm.network "private_network", ip: "10.0.1.10", virtualbox__intnet: "SNet-Net"
+    k.vm.network "private_network", ip: "10.0.2.10", virtualbox__intnet: "SNet2-Net"
+    k.vm.network "private_network", ip: "10.0.3.10", virtualbox__intnet: "SNet3-Net"
     k.vm.network "forwarded_port", guest: 22, host: 3022, id: "kali-ssh"
     k.vm.provider "virtualbox" do |vb|
       vb.memory = 4096
@@ -174,42 +243,89 @@ EOF
       vb.gui = false
     end
 
-    # UX patches: rlwrap, tmux, Guest Additions clipboard fix, HiDPI
+    # UX patches: rlwrap, tmux, Guest Additions, HiDPI, snet-switch
     k.vm.provision "shell", privileged: true, path: "provision_kali.sh"
   end
 
-  # --- Target (server to hack) ---
-  # Target box is split into 2 parts on GitHub Releases due to 2GB limit.
-  # This trigger downloads and reassembles automatically before first use.
-  config.vm.define "target" do |t|
-    # t.vm.box = "hrmtz/snet1-target"
-    t.vm.box = "snet1-target"
-    t.vm.hostname = "target"
-    t.vm.network "private_network", ip: "10.0.1.20", virtualbox__intnet: "SNet-Net"
-    t.ssh.insert_key = false
-    t.vm.boot_timeout = 10
-    t.vm.provider "virtualbox" do |vb|
-      vb.memory = 512
-      vb.cpus = 1
-      vb.name = "SNet1-Target"
-      vb.gui = false
-    end
+  # ===================================================================
+  # SNet1 Target (conditional)
+  # ===================================================================
+  if SNET_ACTIVE.include?('1')
+    config.vm.define "snet1-target" do |t|
+      t.vm.box = "snet1-target"
+      t.vm.hostname = "target"
+      t.vm.network "private_network", ip: "10.0.1.20", virtualbox__intnet: "SNet-Net"
+      t.ssh.insert_key = false
+      t.vm.boot_timeout = 10
+      t.vm.provider "virtualbox" do |vb|
+        vb.memory = 512
+        vb.cpus = 1
+        vb.name = "SNet1-Target"
+        vb.gui = false
+      end
 
-    t.trigger.before :up do |trigger|
-      trigger.name = "Download target box"
-      trigger.ruby do |env, machine|
-        box_exists = system("vagrant box list | grep -q 'snet1-target'")
-        unless box_exists
-          puts "Downloading and assembling snet1-target box..."
-          base_url = "https://github.com/hrmtz/SNet/releases/download/v1.1.0"
-          system("curl -L -o /tmp/snet1-target.part-aa '#{base_url}/snet1-target.box.part-aa'")
-          system("curl -L -o /tmp/snet1-target.part-ab '#{base_url}/snet1-target.box.part-ab'")
-          system("cat /tmp/snet1-target.part-aa /tmp/snet1-target.part-ab > /tmp/snet1-target.box")
-          system("vagrant box add snet1-target /tmp/snet1-target.box")
-          system("rm -f /tmp/snet1-target.part-aa /tmp/snet1-target.part-ab /tmp/snet1-target.box")
-        end
+      split_box_trigger(t, "snet1-target", SNET1_RELEASE)
+    end
+  end
+
+  # ===================================================================
+  # SNet2 Target (conditional)
+  # ===================================================================
+  if SNET_ACTIVE.include?('2')
+    config.vm.define "snet2-target" do |t|
+      t.vm.box = "snet2-target"
+      t.vm.box_url = "#{SNET2_RELEASE}/snet2-target.box"
+      t.vm.hostname = "target"
+      t.vm.network "private_network", ip: "10.0.2.20", virtualbox__intnet: "SNet2-Net"
+      t.ssh.insert_key = false
+      t.vm.boot_timeout = 10
+      t.vm.provider "virtualbox" do |vb|
+        vb.memory = 512
+        vb.cpus = 1
+        vb.name = "SNet2-Target"
+        vb.gui = false
       end
     end
   end
+
+  # ===================================================================
+  # SNet2 Zabbix (conditional)
+  # ===================================================================
+  if SNET_ACTIVE.include?('2')
+    config.vm.define "snet2-zabbix" do |z|
+      z.vm.box = "snet2-zabbix"
+      z.vm.hostname = "zabbix"
+      z.vm.network "private_network", ip: "10.0.2.30", virtualbox__intnet: "SNet2-Net"
+      z.vm.provider "virtualbox" do |vb|
+        vb.memory = 1024
+        vb.cpus = 1
+        vb.name = "SNet2-Zabbix"
+        vb.gui = false
+      end
+
+      split_box_trigger(z, "snet2-zabbix", SNET2_RELEASE)
+    end
+  end
+
+  # ===================================================================
+  # SNet3 (TBD — add VMs here)
+  # Pattern: 10.0.3.x on SNet3-Net
+  # ===================================================================
+  # if SNET_ACTIVE.include?('3')
+  #   config.vm.define "snet3-target" do |t|
+  #     t.vm.box = "snet3-target"
+  #     t.vm.box_url = "#{SNET3_RELEASE}/snet3-target.box"
+  #     t.vm.hostname = "target"
+  #     t.vm.network "private_network", ip: "10.0.3.20", virtualbox__intnet: "SNet3-Net"
+  #     t.ssh.insert_key = false
+  #     t.vm.boot_timeout = 10
+  #     t.vm.provider "virtualbox" do |vb|
+  #       vb.memory = 512
+  #       vb.cpus = 1
+  #       vb.name = "SNet3-Target"
+  #       vb.gui = false
+  #     end
+  #   end
+  # end
 
 end

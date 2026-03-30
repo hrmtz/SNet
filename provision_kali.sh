@@ -11,13 +11,13 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
-echo "=== [1/5] Packages ==="
+echo "=== [1/6] Packages ==="
 apt-get update -qq
 apt-get install -y -qq rlwrap tmux virtualbox-guest-x11 dkms linux-headers-$(uname -r) 2>/dev/null || \
 apt-get install -y -qq rlwrap tmux virtualbox-guest-x11 dkms linux-headers-amd64 2>/dev/null || \
 apt-get install -y -qq rlwrap tmux virtualbox-guest-x11
 
-echo "=== [2/5] VBoxGuest device node fix ==="
+echo "=== [2/6] VBoxGuest device node fix ==="
 # Kali's vboxguest module loads but doesn't create /dev/vboxguest.
 # This service creates the device nodes at boot with retry.
 cat > /usr/local/bin/vbox-devnodes.sh << 'SCRIPT'
@@ -54,7 +54,7 @@ UNIT
 systemctl daemon-reload
 systemctl enable vboxguest-devnodes.service
 
-echo "=== [3/5] Clipboard autostart ==="
+echo "=== [3/6] Clipboard autostart ==="
 mkdir -p /etc/xdg/autostart
 cat > /etc/xdg/autostart/vboxclient-clipboard.desktop << 'DESKTOP'
 [Desktop Entry]
@@ -64,7 +64,7 @@ Exec=/bin/sh -c "VBoxClient --clipboard"
 X-GNOME-Autostart-enabled=true
 DESKTOP
 
-echo "=== [4/5] HiDPI settings ==="
+echo "=== [4/6] HiDPI settings ==="
 # Only apply if host resolution is 4K+ (width >= 3840)
 HOST_WIDTH=$(DISPLAY=:0 xrandr 2>/dev/null | awk '/\*/{print $1}' | head -1 | cut -dx -f1)
 if [ "${HOST_WIDTH:-0}" -ge 3840 ] 2>/dev/null; then
@@ -112,7 +112,7 @@ else
   echo "Standard display (${HOST_WIDTH:-unknown}px). Skipping HiDPI."
 fi
 
-echo "=== [5/5] tmux config ==="
+echo "=== [5/6] tmux config ==="
 cat > /home/vagrant/.tmux.conf << 'TMUX'
 # Mouse scrolling
 set -g mouse on
@@ -131,9 +131,40 @@ set -g base-index 1
 TMUX
 chown vagrant:vagrant /home/vagrant/.tmux.conf
 
+echo "=== [6/6] SNet network switch ==="
+cat > /usr/local/bin/snet-switch << 'SCRIPT'
+#!/bin/bash
+# snet-switch — toggle active SNet network
+# eth0=NAT (Vagrant), eth1=SNet-Net, eth2=SNet2-Net, eth3=SNet3-Net
+# To add a new scenario: add a case entry for the new ethN
+
+# Bring all scenario NICs down first
+for iface in eth1 eth2 eth3; do
+  sudo ip link set "$iface" down 2>/dev/null
+done
+
+case "$1" in
+  1) sudo ip link set eth1 up 2>/dev/null
+     echo "Switched to SNet1 network (10.0.1.10 on SNet-Net)" ;;
+  2) sudo ip link set eth2 up 2>/dev/null
+     echo "Switched to SNet2 network (10.0.2.10 on SNet2-Net)" ;;
+  3) sudo ip link set eth3 up 2>/dev/null
+     echo "Switched to SNet3 network (10.0.3.10 on SNet3-Net)" ;;
+  *) echo "Usage: snet-switch {1|2|3}"; exit 1 ;;
+esac
+SCRIPT
+chmod +x /usr/local/bin/snet-switch
+
+# Default: SNet1 active, all others inactive
+for iface in eth2 eth3; do
+  ip link show "$iface" &>/dev/null && ip link set "$iface" down
+done
+
 echo ""
 echo "=========================================="
 echo " Kali UX provisioning complete"
 echo "=========================================="
 echo " Reboot for full effect (devnodes + DPI)"
+echo " Use 'snet-switch N' to switch network."
+echo " (e.g. snet-switch 1, snet-switch 2)"
 echo "=========================================="
