@@ -86,12 +86,10 @@ Vagrant.configure("2") do |config|
     c.ssh.username = "snet"
     c.ssh.insert_key = true
 
-    # Install Node.js and Claude Code
-    c.vm.provision "shell", privileged: true, inline: <<-'SHELL'
-      curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-      apt-get install -y nodejs
-      npm install -g @anthropic-ai/claude-code
-      su - snet -c "claude install -g" 2>/dev/null || true
+    # Install/update Claude Code (native binary, no Node.js dependency)
+    c.vm.provision "shell", privileged: false, inline: <<-'SHELL'
+      curl -fsSL https://claude.ai/install.sh | bash
+      grep -q '.local/bin' ~/.bashrc || echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
     SHELL
 
     # Fetch/update scenario repos + trainer overlay (SNET-aware)
